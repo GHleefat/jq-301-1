@@ -39,17 +39,14 @@ export default function TruckCanvas() {
   const [draggingPlacedId, setDraggingPlacedId] = useState<string | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
 
-  const getCanvasCoords = useCallback(
-    (clientX: number, clientY: number) => {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return { x: 0, y: 0 };
-      return {
-        x: snapToGrid(clientX - rect.left),
-        y: snapToGrid(clientY - rect.top),
-      };
-    },
-    []
-  );
+  const getCanvasCoords = useCallback((clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: snapToGrid(clientX - rect.left),
+      y: snapToGrid(clientY - rect.top),
+    };
+  }, []);
 
   const triggerShake = useCallback(() => {
     setShakeKey((k) => k + 1);
@@ -61,7 +58,7 @@ export default function TruckCanvas() {
       triggerShake();
       setTimeout(() => setErrorMessage(null), 1500);
     },
-    [setErrorMessage, triggerShake]
+    [setErrorMessage, triggerShake],
   );
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -90,7 +87,7 @@ export default function TruckCanvas() {
     const result = canPlace(
       { x: x - width / 2, y: y - height / 2, width, height },
       placedItems,
-      truck
+      truck,
     );
 
     setGhost({
@@ -133,22 +130,19 @@ export default function TruckCanvas() {
       item,
       snapToGrid(x - item.width / 2),
       snapToGrid(y - item.height / 2),
-      false
+      false,
     );
 
     if (!result.success) {
       showError(
         result.reason === "bounds"
           ? "⚠️ 物品超出货箱边界！"
-          : "⚠️ 与其他物品发生碰撞！"
+          : "⚠️ 与其他物品发生碰撞！",
       );
     }
   };
 
-  const handleCanvasMouseDown = (
-    e: React.MouseEvent,
-    placed: PlacedItem
-  ) => {
+  const handleCanvasMouseDown = (e: React.MouseEvent, placed: PlacedItem) => {
     if (e.button !== 0) return;
     e.stopPropagation();
     setSelected(placed.id);
@@ -181,7 +175,7 @@ export default function TruckCanvas() {
         { x: newX, y: newY, width: placed.width, height: placed.height },
         placedItems,
         truck,
-        placed.id
+        placed.id,
       );
 
       setGhost({
@@ -195,7 +189,7 @@ export default function TruckCanvas() {
         name: placed.name,
       });
     },
-    [isDraggingCanvas, draggingPlacedId, dragOffset, placedItems, truck]
+    [isDraggingCanvas, draggingPlacedId, dragOffset, placedItems, truck],
   );
 
   const handleCanvasMouseUp = useCallback(
@@ -223,7 +217,7 @@ export default function TruckCanvas() {
           showError(
             result.reason === "bounds"
               ? "⚠️ 物品超出货箱边界！"
-              : "⚠️ 与其他物品发生碰撞！"
+              : "⚠️ 与其他物品发生碰撞！",
           );
         }
       }
@@ -239,7 +233,7 @@ export default function TruckCanvas() {
       placedItems,
       movePlacedItem,
       showError,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -260,7 +254,7 @@ export default function TruckCanvas() {
       showError(
         result.reason === "bounds"
           ? "⚠️ 旋转后超出货箱边界！"
-          : "⚠️ 旋转后与其他物品碰撞！"
+          : "⚠️ 旋转后与其他物品碰撞！",
       );
     }
   };
@@ -283,7 +277,7 @@ export default function TruckCanvas() {
           showError(
             result.reason === "bounds"
               ? "⚠️ 旋转后超出货箱边界！"
-              : "⚠️ 旋转后与其他物品碰撞！"
+              : "⚠️ 旋转后与其他物品碰撞！",
           );
         }
       }
@@ -296,8 +290,8 @@ export default function TruckCanvas() {
   }, [selectedId, rotatePlacedItem, removePlacedItem, showError]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="shrink-0 flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5 text-brand-400" />
           <h2 className="text-sm font-semibold text-slate-100">货箱空间</h2>
@@ -306,21 +300,27 @@ export default function TruckCanvas() {
           </span>
         </div>
         <div className="text-xs text-slate-500">
-          按 <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">R</kbd> 旋转
+          按{" "}
+          <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
+            R
+          </kbd>{" "}
+          旋转
           <span className="mx-1">·</span>
-          <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">Del</kbd> 删除
+          <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
+            Del
+          </kbd>{" "}
+          删除
         </div>
       </div>
 
       <div
         key={shakeKey}
         className={cn(
-          "relative flex-1 rounded-2xl border-2 border-slate-700/60 overflow-hidden flex items-center justify-center",
-          shakeKey > 0 && "animate-shake"
+          "relative shrink-0 rounded-2xl border-2 border-slate-700/60 overflow-hidden flex items-start justify-center",
+          shakeKey > 0 && "animate-shake",
         )}
         style={{
-          background:
-            "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
           boxShadow:
             "inset 0 0 60px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.3)",
         }}
@@ -352,117 +352,120 @@ export default function TruckCanvas() {
               borderRadius: "4px",
             }}
           >
-          <div
-            className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent"
-          />
-          <div
-            className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent"
-          />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent" />
 
-          {placedItems.map((placed) => {
-            const isSelected = selectedId === placed.id;
-            const isBeingDragged = draggingPlacedId === placed.id;
-            return (
+            {placedItems.map((placed) => {
+              const isSelected = selectedId === placed.id;
+              const isBeingDragged = draggingPlacedId === placed.id;
+              return (
+                <div
+                  key={placed.id}
+                  onMouseDown={(e) => handleCanvasMouseDown(e, placed)}
+                  className={cn(
+                    "absolute rounded-md cursor-move select-none transition-shadow",
+                    "flex items-center justify-center",
+                    isSelected &&
+                      "ring-2 ring-brand-400 ring-offset-2 ring-offset-slate-900 z-20",
+                    !isSelected && "hover:ring-2 hover:ring-white/30 z-10",
+                    isBeingDragged && "opacity-20",
+                  )}
+                  style={{
+                    left: placed.x,
+                    top: placed.y,
+                    width: placed.width,
+                    height: placed.height,
+                    backgroundColor: placed.color,
+                    boxShadow: isSelected
+                      ? `0 0 0 1px rgba(255,255,255,0.2), 0 8px 24px ${placed.color}60`
+                      : `0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px ${placed.color}40`,
+                  }}
+                >
+                  <span className="text-xs font-medium text-white/95 text-center px-1 drop-shadow-sm">
+                    {placed.name}
+                  </span>
+
+                  {isSelected && (
+                    <div
+                      className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-lg p-1 shadow-xl z-30"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={(e) => handleRotate(e, placed.id)}
+                        className="p-1.5 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                        title="旋转 (R)"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, placed.id)}
+                        className="p-1.5 rounded hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition-colors"
+                        title="删除 (Del)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {ghost && (
               <div
-                key={placed.id}
-                onMouseDown={(e) => handleCanvasMouseDown(e, placed)}
                 className={cn(
-                  "absolute rounded-md cursor-move select-none transition-shadow",
+                  "absolute rounded-md pointer-events-none transition-all",
                   "flex items-center justify-center",
-                  isSelected && "ring-2 ring-brand-400 ring-offset-2 ring-offset-slate-900 z-20",
-                  !isSelected && "hover:ring-2 hover:ring-white/30 z-10",
-                  isBeingDragged && "opacity-20"
+                  ghost.valid
+                    ? "border-2 border-dashed border-emerald-400/80"
+                    : "border-2 border-dashed border-rose-400/80",
                 )}
                 style={{
-                  left: placed.x,
-                  top: placed.y,
-                  width: placed.width,
-                  height: placed.height,
-                  backgroundColor: placed.color,
-                  boxShadow: isSelected
-                    ? `0 0 0 1px rgba(255,255,255,0.2), 0 8px 24px ${placed.color}60`
-                    : `0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px ${placed.color}40`,
+                  left: ghost.x,
+                  top: ghost.y,
+                  width: ghost.width,
+                  height: ghost.height,
+                  backgroundColor: ghost.valid
+                    ? `${ghost.color}55`
+                    : `${ghost.color}33`,
+                  boxShadow: ghost.valid
+                    ? `0 0 20px ${ghost.color}40`
+                    : "0 0 20px rgba(244,63,94,0.3)",
                 }}
               >
-                <span className="text-xs font-medium text-white/95 text-center px-1 drop-shadow-sm">
-                  {placed.name}
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    ghost.valid ? "text-white" : "text-rose-200",
+                  )}
+                >
+                  {ghost.name}
                 </span>
-
-                {isSelected && (
-                  <div
-                    className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-lg p-1 shadow-xl z-30"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={(e) => handleRotate(e, placed.id)}
-                      className="p-1.5 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                      title="旋转 (R)"
-                    >
-                      <RotateCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDelete(e, placed.id)}
-                      className="p-1.5 rounded hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition-colors"
-                      title="删除 (Del)"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {ghost && (
-            <div
-              className={cn(
-                "absolute rounded-md pointer-events-none transition-all",
-                "flex items-center justify-center",
-                ghost.valid
-                  ? "border-2 border-dashed border-emerald-400/80"
-                  : "border-2 border-dashed border-rose-400/80"
-              )}
-              style={{
-                left: ghost.x,
-                top: ghost.y,
-                width: ghost.width,
-                height: ghost.height,
-                backgroundColor: ghost.valid
-                  ? `${ghost.color}55`
-                  : `${ghost.color}33`,
-                boxShadow: ghost.valid
-                  ? `0 0 20px ${ghost.color}40`
-                  : "0 0 20px rgba(244,63,94,0.3)",
-              }}
-            >
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  ghost.valid ? "text-white" : "text-rose-200"
-                )}
-              >
-                {ghost.name}
-              </span>
-            </div>
-          )}
-
-          {placedItems.length === 0 && !ghost && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
-              <Truck className="w-16 h-16 mb-3 opacity-30" />
-              <p className="text-sm">将物品拖拽到此处</p>
-              <p className="text-xs mt-1 opacity-60">
-                或点击「自动装载」快速装箱
-              </p>
-            </div>
-          )}
-        </div>
-
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            {ghost && (ghost.x < 0 || ghost.y < 0 || ghost.x + ghost.width > truck.width || ghost.y + ghost.height > truck.height) && (
-              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
-                <span className="text-xs text-slate-400 font-medium">超出货箱范围</span>
               </div>
             )}
+
+            {placedItems.length === 0 && !ghost && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500 pointer-events-none">
+                <Truck className="w-16 h-16 mb-3 opacity-30" />
+                <p className="text-sm">将物品拖拽到此处</p>
+                <p className="text-xs mt-1 opacity-60">
+                  或点击「自动装载」快速装箱
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            {ghost &&
+              (ghost.x < 0 ||
+                ghost.y < 0 ||
+                ghost.x + ghost.width > truck.width ||
+                ghost.y + ghost.height > truck.height) && (
+                <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
+                  <span className="text-xs text-slate-400 font-medium">
+                    超出货箱范围
+                  </span>
+                </div>
+              )}
           </div>
         </div>
 

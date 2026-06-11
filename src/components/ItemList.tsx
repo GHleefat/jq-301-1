@@ -17,7 +17,7 @@ function ItemCard({ item, source }: ItemCardProps) {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData(
       "application/json",
-      JSON.stringify({ source, itemId: item.id })
+      JSON.stringify({ source, itemId: item.id }),
     );
   };
 
@@ -28,7 +28,7 @@ function ItemCard({ item, source }: ItemCardProps) {
       className={cn(
         "group flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing",
         "bg-slate-800/60 border-slate-700 hover:border-brand-500/60",
-        "hover:bg-slate-800 transition-all duration-200 animate-fade-in"
+        "hover:bg-slate-800 transition-all duration-200 animate-fade-in",
       )}
     >
       <div
@@ -67,7 +67,7 @@ export default function ItemList() {
   const { pendingItems } = usePackingStore();
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/40 rounded-2xl border border-slate-700/60 overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col bg-slate-900/40 rounded-2xl border border-slate-700/60 overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-700/60 bg-slate-800/40">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
@@ -80,7 +80,7 @@ export default function ItemList() {
         </div>
         <p className="text-xs text-slate-500 mt-1">拖拽物品到货箱中</p>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin p-3 space-y-2">
         {pendingItems.length === 0 ? (
           <div className="text-center text-sm text-slate-500 py-8">
             所有物品已装载 ✨

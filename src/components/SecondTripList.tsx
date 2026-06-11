@@ -12,7 +12,7 @@ function SecondTripCard({ item }: { item: Item }) {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData(
       "application/json",
-      JSON.stringify({ source: "secondTrip", itemId: item.id })
+      JSON.stringify({ source: "secondTrip", itemId: item.id }),
     );
   };
 
@@ -23,7 +23,7 @@ function SecondTripCard({ item }: { item: Item }) {
       className={cn(
         "group flex items-center gap-2.5 p-2 rounded-lg border cursor-grab active:cursor-grabbing",
         "bg-rose-950/30 border-rose-900/40 hover:border-rose-500/50",
-        "hover:bg-rose-950/50 transition-all duration-200 animate-fade-in"
+        "hover:bg-rose-950/50 transition-all duration-200 animate-fade-in",
       )}
     >
       <div
@@ -61,7 +61,7 @@ export default function SecondTripList() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-900/40 rounded-2xl border border-rose-900/30 overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col bg-slate-900/40 rounded-2xl border border-rose-900/30 overflow-hidden">
       <div className="px-4 py-3 border-b border-rose-900/30 bg-rose-950/20">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-rose-200 flex items-center gap-2">
@@ -77,7 +77,7 @@ export default function SecondTripList() {
           装不下的物品放这里
         </p>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-thin p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin p-3 space-y-2">
         {secondTripItems.length === 0 ? (
           <div className="text-center text-sm text-slate-500 py-8 flex flex-col items-center gap-2">
             <Package className="w-8 h-8 text-slate-600" />
