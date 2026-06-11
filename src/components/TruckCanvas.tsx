@@ -315,7 +315,7 @@ export default function TruckCanvas() {
       <div
         key={shakeKey}
         className={cn(
-          "relative flex-1 rounded-2xl border-2 border-slate-700/60 overflow-hidden",
+          "relative flex-1 rounded-2xl border-2 border-slate-700/60 overflow-hidden flex items-center justify-center",
           shakeKey > 0 && "animate-shake"
         )}
         style={{
@@ -326,19 +326,32 @@ export default function TruckCanvas() {
         }}
       >
         <div
-          ref={canvasRef}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={handleCanvasClick}
-          className="relative w-full h-full cursor-crosshair"
+          className="relative"
           style={{
-            minHeight: truck.height,
             backgroundImage:
-              "linear-gradient(rgba(148,163,184,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.06) 1px, transparent 1px)",
-            backgroundSize: "20px 20px",
+              "repeating-linear-gradient(45deg, rgba(71,85,105,0.15) 0px, rgba(71,85,105,0.15) 10px, transparent 10px, transparent 20px)",
+            padding: "24px",
           }}
         >
+          <div
+            ref={canvasRef}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={handleCanvasClick}
+            className="relative cursor-crosshair"
+            style={{
+              width: truck.width,
+              height: truck.height,
+              backgroundImage:
+                "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)",
+              backgroundSize: "20px 20px",
+              backgroundColor: "#0f172a",
+              boxShadow:
+                "inset 0 0 40px rgba(0,0,0,0.5), 0 0 0 2px rgba(249,115,22,0.3), 0 8px 32px rgba(0,0,0,0.4)",
+              borderRadius: "4px",
+            }}
+          >
           <div
             className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500/40 to-transparent"
           />
@@ -442,6 +455,15 @@ export default function TruckCanvas() {
               </p>
             </div>
           )}
+        </div>
+
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            {ghost && (ghost.x < 0 || ghost.y < 0 || ghost.x + ghost.width > truck.width || ghost.y + ghost.height > truck.height) && (
+              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center">
+                <span className="text-xs text-slate-400 font-medium">超出货箱范围</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {errorMessage && (

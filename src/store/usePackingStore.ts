@@ -203,41 +203,37 @@ export const usePackingStore = create<PackingState>((set, get) => ({
 
   autoPackRemaining: () => {
     const state = get();
-    const remaining = [...state.pendingItems];
+    const remaining = [...state.pendingItems].sort(
+      (a, b) => b.width * b.height - a.width * a.height
+    );
+
+    const tryPlaceItem = (item: Item, rotated: boolean): boolean => {
+      const cur = get();
+      const w = rotated ? item.height : item.width;
+      const h = rotated ? item.width : item.height;
+
+      for (let y = 0; y <= cur.truck.height - h; y += 10) {
+        for (let x = 0; x <= cur.truck.width - w; x += 10) {
+          const r = get().placeItem(item, x, y, rotated);
+          if (r.success) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
     for (const item of remaining) {
       let placed = false;
-      for (let y = 0; y <= state.truck.height - item.height && !placed; y += 10) {
-        for (
-          let x = 0;
-          x <= state.truck.width - item.width && !placed;
-          x += 10
-        ) {
-          const r = get().placeItem(item, x, y, false);
-          if (r.success) {
-            placed = true;
-            break;
-          }
-        }
+
+      if (item.height > item.width) {
+        placed = tryPlaceItem(item, true);
+        if (!placed) placed = tryPlaceItem(item, false);
+      } else {
+        placed = tryPlaceItem(item, false);
+        if (!placed) placed = tryPlaceItem(item, true);
       }
-      if (!placed) {
-        for (
-          let y = 0;
-          y <= state.truck.height - item.width && !placed;
-          y += 10
-        ) {
-          for (
-            let x = 0;
-            x <= state.truck.width - item.height && !placed;
-            x += 10
-          ) {
-            const r = get().placeItem(item, x, y, true);
-            if (r.success) {
-              placed = true;
-              break;
-            }
-          }
-        }
-      }
+
       if (!placed) {
         get().sendToSecondTrip(item);
       }
