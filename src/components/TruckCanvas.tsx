@@ -19,21 +19,17 @@ interface GhostItem {
   rotated?: boolean;
 }
 
-interface DragSourceInfo {
-  source: "pending" | "secondTrip" | null;
-  itemId: string | null;
-}
-
 export default function TruckCanvas() {
   const {
     truck,
     placedItems,
-    pendingItems,
-    secondTripItems,
     selectedId,
     errorMessage,
+    draggingItem,
+    draggingSource,
     setSelected,
     setErrorMessage,
+    setDraggingItem,
     placeItem,
     movePlacedItem,
     rotatePlacedItem,
@@ -42,10 +38,6 @@ export default function TruckCanvas() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [ghost, setGhost] = useState<GhostItem | null>(null);
-  const [dragSource, setDragSource] = useState<DragSourceInfo>({
-    source: null,
-    itemId: null,
-  });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [draggingPlacedId, setDraggingPlacedId] = useState<string | null>(null);
@@ -78,23 +70,9 @@ export default function TruckCanvas() {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
-    const data = e.dataTransfer.getData("application/json");
-    if (!data) return;
-
-    let item: Item | null = null;
-    let source: "pending" | "secondTrip" = "pending";
-    try {
-      const parsed = JSON.parse(data);
-      source = parsed.source === "secondTrip" ? "secondTrip" : "pending";
-      const list = source === "secondTrip" ? secondTripItems : pendingItems;
-      item = list.find((i: Item) => i.id === parsed.itemId) ?? null;
-    } catch {
-      return;
-    }
-
+    const item = draggingItem;
     if (!item) return;
 
-    setDragSource({ source, itemId: item.id });
     setLastMousePos({ x: e.clientX, y: e.clientY });
 
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
@@ -133,26 +111,15 @@ export default function TruckCanvas() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const data = e.dataTransfer.getData("application/json");
+
+    const item = draggingItem;
 
     let droppedRotated = false;
     if (ghost && typeof ghost.rotated === "boolean") {
       droppedRotated = ghost.rotated;
     }
     setGhost(null);
-    setDragSource({ source: null, itemId: null });
-
-    if (!data) return;
-
-    let item: Item | null = null;
-    try {
-      const parsed = JSON.parse(data);
-      const list =
-        parsed.source === "secondTrip" ? secondTripItems : pendingItems;
-      item = list.find((i: Item) => i.id === parsed.itemId) ?? null;
-    } catch {
-      return;
-    }
+    setDraggingItem(null, null);
 
     if (!item) return;
 
@@ -304,50 +271,46 @@ export default function TruckCanvas() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "r" || e.key === "R") {
-        if (ghost && dragSource.itemId) {
-          const list =
-            dragSource.source === "secondTrip" ? secondTripItems : pendingItems;
-          const item = list.find((i: Item) => i.id === dragSource.itemId);
-          if (item) {
-            const wasRotated = ghost.rotated ?? false;
-            const newRotated = !wasRotated;
-            const newWidth = newRotated ? item.height : item.width;
-            const newHeight = newRotated ? item.width : item.height;
+        if (ghost && draggingItem) {
+          const item = draggingItem;
+          const wasRotated = ghost.rotated ?? false;
+          const newRotated = !wasRotated;
+          const newWidth = newRotated ? item.height : item.width;
+          const newHeight = newRotated ? item.width : item.height;
 
-            const centerX =
-              ghost.x +
-              (newRotated
-                ? (ghost.width - newWidth) / 2
-                : ghost.width / 2 - newWidth / 2);
-            const centerY =
-              ghost.y +
-              (newRotated
-                ? (ghost.height - newHeight) / 2
-                : ghost.height / 2 - newHeight / 2);
+          const centerX =
+            ghost.x +
+            (newRotated
+              ? (ghost.width - newWidth) / 2
+              : ghost.width / 2 - newWidth / 2);
+          const centerY =
+            ghost.y +
+            (newRotated
+              ? (ghost.height - newHeight) / 2
+              : ghost.height / 2 - newHeight / 2);
 
-            const snappedX = snapToGrid(centerX);
-            const snappedY = snapToGrid(centerY);
+          const snappedX = snapToGrid(centerX);
+          const snappedY = snapToGrid(centerY);
 
-            const result = canPlace(
-              { x: snappedX, y: snappedY, width: newWidth, height: newHeight },
-              placedItems,
-              truck,
-            );
+          const result = canPlace(
+            { x: snappedX, y: snappedY, width: newWidth, height: newHeight },
+            placedItems,
+            truck,
+          );
 
-            setGhost({
-              x: snappedX,
-              y: snappedY,
-              width: newWidth,
-              height: newHeight,
-              valid: result.ok,
-              reason: result.reason,
-              color: item.color,
-              name: item.name,
-              originalWidth: item.width,
-              originalHeight: item.height,
-              rotated: newRotated,
-            });
-          }
+          setGhost({
+            x: snappedX,
+            y: snappedY,
+            width: newWidth,
+            height: newHeight,
+            valid: result.ok,
+            reason: result.reason,
+            color: item.color,
+            name: item.name,
+            originalWidth: item.width,
+            originalHeight: item.height,
+            rotated: newRotated,
+          });
           return;
         }
 
@@ -371,10 +334,8 @@ export default function TruckCanvas() {
   }, [
     selectedId,
     ghost,
-    dragSource,
+    draggingItem,
     placedItems,
-    secondTripItems,
-    pendingItems,
     truck,
     rotatePlacedItem,
     removePlacedItem,

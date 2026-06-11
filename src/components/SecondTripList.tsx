@@ -4,6 +4,7 @@ import { usePackingStore } from "@/store/usePackingStore";
 import { cn } from "@/lib/utils";
 
 function SecondTripCard({ item }: { item: Item }) {
+  const { setDraggingItem } = usePackingStore();
   const scale = Math.min(50 / Math.max(item.width, item.height), 1);
   const displayWidth = item.width * scale;
   const displayHeight = item.height * scale;
@@ -14,12 +15,18 @@ function SecondTripCard({ item }: { item: Item }) {
       "application/json",
       JSON.stringify({ source: "secondTrip", itemId: item.id }),
     );
+    setDraggingItem(item, "secondTrip");
+  };
+
+  const handleDragEnd = () => {
+    setDraggingItem(null, null);
   };
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
         "group flex items-center gap-2.5 p-2 rounded-lg border cursor-grab active:cursor-grabbing",
         "bg-rose-950/30 border-rose-900/40 hover:border-rose-500/50",

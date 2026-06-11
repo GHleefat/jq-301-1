@@ -9,6 +9,7 @@ interface ItemCardProps {
 }
 
 function ItemCard({ item, source }: ItemCardProps) {
+  const { setDraggingItem } = usePackingStore();
   const scale = Math.min(60 / Math.max(item.width, item.height), 1);
   const displayWidth = item.width * scale;
   const displayHeight = item.height * scale;
@@ -19,12 +20,18 @@ function ItemCard({ item, source }: ItemCardProps) {
       "application/json",
       JSON.stringify({ source, itemId: item.id }),
     );
+    setDraggingItem(item, source);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingItem(null, null);
   };
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
         "group flex items-center gap-3 p-3 rounded-lg border cursor-grab active:cursor-grabbing",
         "bg-slate-800/60 border-slate-700 hover:border-brand-500/60",

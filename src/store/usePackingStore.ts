@@ -10,9 +10,12 @@ interface PackingState {
   placedItems: PlacedItem[];
   selectedId: string | null;
   errorMessage: string | null;
+  draggingItem: Item | null;
+  draggingSource: "pending" | "secondTrip" | null;
 
   setSelected: (id: string | null) => void;
   setErrorMessage: (msg: string | null) => void;
+  setDraggingItem: (item: Item | null, source?: "pending" | "secondTrip" | null) => void;
 
   placeItem: (
     item: Item,
@@ -51,9 +54,13 @@ export const usePackingStore = create<PackingState>((set, get) => ({
   placedItems: [],
   selectedId: null,
   errorMessage: null,
+  draggingItem: null,
+  draggingSource: null,
 
   setSelected: (id) => set({ selectedId: id }),
   setErrorMessage: (msg) => set({ errorMessage: msg }),
+  setDraggingItem: (item, source = null) =>
+    set({ draggingItem: item, draggingSource: source }),
 
   placeItem: (item, x, y, rotated) => {
     const state = get();
