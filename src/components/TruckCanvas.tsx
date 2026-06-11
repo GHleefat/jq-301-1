@@ -14,6 +14,14 @@ interface GhostItem {
   reason?: "collision" | "bounds";
   color: string;
   name: string;
+  originalWidth?: number;
+  originalHeight?: number;
+  rotated?: boolean;
+}
+
+interface DragSourceInfo {
+  source: "pending" | "secondTrip" | null;
+  itemId: string | null;
 }
 
 export default function TruckCanvas() {
@@ -34,10 +42,15 @@ export default function TruckCanvas() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [ghost, setGhost] = useState<GhostItem | null>(null);
+  const [dragSource, setDragSource] = useState<DragSourceInfo>({
+    source: null,
+    itemId: null,
+  });
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [draggingPlacedId, setDraggingPlacedId] = useState<string | null>(null);
   const [shakeKey, setShakeKey] = useState(0);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
 
   const getCanvasCoords = useCallback((clientX: number, clientY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -69,10 +82,11 @@ export default function TruckCanvas() {
     if (!data) return;
 
     let item: Item | null = null;
+    let source: "pending" | "secondTrip" = "pending";
     try {
       const parsed = JSON.parse(data);
-      const list =
-        parsed.source === "secondTrip" ? secondTripItems : pendingItems;
+      source = parsed.source === "secondTrip" ? "secondTrip" : "pending";
+      const list = source === "secondTrip" ? secondTripItems : pendingItems;
       item = list.find((i: Item) => i.id === parsed.itemId) ?? null;
     } catch {
       return;
@@ -80,25 +94,36 @@ export default function TruckCanvas() {
 
     if (!item) return;
 
+    setDragSource({ source, itemId: item.id });
+    setLastMousePos({ x: e.clientX, y: e.clientY });
+
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
-    const width = item.width;
-    const height = item.height;
+
+    const existingGhost = ghost;
+    const shouldRotate = existingGhost?.rotated ?? false;
+    const width = shouldRotate ? item.height : item.width;
+    const height = shouldRotate ? item.width : item.height;
+    const centerX = x - width / 2;
+    const centerY = y - height / 2;
 
     const result = canPlace(
-      { x: x - width / 2, y: y - height / 2, width, height },
+      { x: centerX, y: centerY, width, height },
       placedItems,
       truck,
     );
 
     setGhost({
-      x: x - width / 2,
-      y: y - height / 2,
+      x: centerX,
+      y: centerY,
       width,
       height,
       valid: result.ok,
       reason: result.reason,
       color: item.color,
       name: item.name,
+      originalWidth: item.width,
+      originalHeight: item.height,
+      rotated: shouldRotate,
     });
   };
 
@@ -109,7 +134,13 @@ export default function TruckCanvas() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const data = e.dataTransfer.getData("application/json");
+
+    let droppedRotated = false;
+    if (ghost && typeof ghost.rotated === "boolean") {
+      droppedRotated = ghost.rotated;
+    }
     setGhost(null);
+    setDragSource({ source: null, itemId: null });
 
     if (!data) return;
 
@@ -126,11 +157,13 @@ export default function TruckCanvas() {
     if (!item) return;
 
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+    const w = droppedRotated ? item.height : item.width;
+    const h = droppedRotated ? item.width : item.height;
     const result = placeItem(
       item,
-      snapToGrid(x - item.width / 2),
-      snapToGrid(y - item.height / 2),
-      false,
+      snapToGrid(x - w / 2),
+      snapToGrid(y - h / 2),
+      droppedRotated,
     );
 
     if (!result.success) {
@@ -270,28 +303,91 @@ export default function TruckCanvas() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedId) return;
       if (e.key === "r" || e.key === "R") {
-        const result = rotatePlacedItem(selectedId);
-        if (!result.success) {
-          showError(
-            result.reason === "bounds"
-              ? "⚠️ 旋转后超出货箱边界！"
-              : "⚠️ 旋转后与其他物品碰撞！",
-          );
+        if (ghost && dragSource.itemId) {
+          const list =
+            dragSource.source === "secondTrip" ? secondTripItems : pendingItems;
+          const item = list.find((i: Item) => i.id === dragSource.itemId);
+          if (item) {
+            const wasRotated = ghost.rotated ?? false;
+            const newRotated = !wasRotated;
+            const newWidth = newRotated ? item.height : item.width;
+            const newHeight = newRotated ? item.width : item.height;
+
+            const centerX =
+              ghost.x +
+              (newRotated
+                ? (ghost.width - newWidth) / 2
+                : ghost.width / 2 - newWidth / 2);
+            const centerY =
+              ghost.y +
+              (newRotated
+                ? (ghost.height - newHeight) / 2
+                : ghost.height / 2 - newHeight / 2);
+
+            const snappedX = snapToGrid(centerX);
+            const snappedY = snapToGrid(centerY);
+
+            const result = canPlace(
+              { x: snappedX, y: snappedY, width: newWidth, height: newHeight },
+              placedItems,
+              truck,
+            );
+
+            setGhost({
+              x: snappedX,
+              y: snappedY,
+              width: newWidth,
+              height: newHeight,
+              valid: result.ok,
+              reason: result.reason,
+              color: item.color,
+              name: item.name,
+              originalWidth: item.width,
+              originalHeight: item.height,
+              rotated: newRotated,
+            });
+          }
+          return;
+        }
+
+        if (selectedId) {
+          const result = rotatePlacedItem(selectedId);
+          if (!result.success) {
+            showError(
+              result.reason === "bounds"
+                ? "⚠️ 旋转后超出货箱边界！"
+                : "⚠️ 旋转后与其他物品碰撞！",
+            );
+          }
         }
       }
-      if (e.key === "Delete" || e.key === "Backspace") {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
         removePlacedItem(selectedId);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedId, rotatePlacedItem, removePlacedItem, showError]);
+  }, [
+    selectedId,
+    ghost,
+    dragSource,
+    placedItems,
+    secondTripItems,
+    pendingItems,
+    truck,
+    rotatePlacedItem,
+    removePlacedItem,
+    showError,
+  ]);
+
+  const selectedItem = selectedId
+    ? (placedItems.find((p) => p.id === selectedId) ?? null)
+    : null;
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="shrink-0 flex items-center justify-between mb-2">
+      <div className="shrink-0 flex items-center justify-between mb-2 gap-3">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5 text-brand-400" />
           <h2 className="text-sm font-semibold text-slate-100">货箱空间</h2>
@@ -299,17 +395,49 @@ export default function TruckCanvas() {
             {truck.width} × {truck.height} cm
           </span>
         </div>
-        <div className="text-xs text-slate-500">
-          按{" "}
-          <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
-            R
-          </kbd>{" "}
-          旋转
-          <span className="mx-1">·</span>
-          <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
-            Del
-          </kbd>{" "}
-          删除
+        <div className="flex items-center gap-3">
+          {selectedItem && (
+            <div className="flex items-center gap-1 bg-slate-800/70 border border-slate-700/60 rounded-lg px-2 py-1 animate-fade-in">
+              <span className="text-xs text-slate-400 px-1.5 truncate max-w-[100px]">
+                {selectedItem.name}
+              </span>
+              <button
+                onClick={() => {
+                  const result = rotatePlacedItem(selectedItem.id);
+                  if (!result.success) {
+                    showError(
+                      result.reason === "bounds"
+                        ? "⚠️ 旋转后超出货箱边界！"
+                        : "⚠️ 旋转后与其他物品碰撞！",
+                    );
+                  }
+                }}
+                className="p-1.5 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                title="旋转 (R)"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => removePlacedItem(selectedItem.id)}
+                className="p-1.5 rounded hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition-colors"
+                title="删除 (Del)"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          <div className="text-xs text-slate-500">
+            按{" "}
+            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
+              R
+            </kbd>{" "}
+            旋转
+            <span className="mx-1">·</span>
+            <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-slate-300 text-[10px]">
+              Del
+            </kbd>{" "}
+            删除
+          </div>
         </div>
       </div>
 
@@ -384,28 +512,6 @@ export default function TruckCanvas() {
                   <span className="text-xs font-medium text-white/95 text-center px-1 drop-shadow-sm">
                     {placed.name}
                   </span>
-
-                  {isSelected && (
-                    <div
-                      className="absolute -top-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-lg p-1 shadow-xl z-30"
-                      onMouseDown={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={(e) => handleRotate(e, placed.id)}
-                        className="p-1.5 rounded hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                        title="旋转 (R)"
-                      >
-                        <RotateCw className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(e, placed.id)}
-                        className="p-1.5 rounded hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition-colors"
-                        title="删除 (Del)"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               );
             })}
